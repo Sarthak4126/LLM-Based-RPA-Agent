@@ -1,9 +1,8 @@
-#### **`src/core/planner.py`**
-
 # src/core/planner.py
 from typing import Dict, Any
 from .llm_provider import LLMProvider
 from .logger import logger
+import re
 
 class GoalPlanner:
     def __init__(self):
@@ -13,12 +12,12 @@ class GoalPlanner:
     def _get_available_actions(self) -> Dict[str, Any]:
         return {
             "desktop": {
-                "open_app": "Opens a desktop application. Parameter: 'app_name'.",
+                "open_app": "Opens a NON-BROWSER application (e.g., 'notepad'). Parameter: 'app_name'.",
                 "keyboard_input": "Types text using the keyboard. Parameter: 'text'.",
                 "mouse_click": "Performs a click at specific (x,y) coordinates."
             },
             "web": {
-                "search": "Searches 'google' or 'youtube'. Opens browser automatically. Parameters: 'site', 'query'.",
+                "search": "Use to search 'google' or 'youtube'. Opens the browser automatically. Parameters: 'site', 'query'.",
                 "click_element": "Clicks a web element using a CSS selector. Parameter: 'selector'."
             }
         }
@@ -26,28 +25,69 @@ class GoalPlanner:
     def _validate_and_clean_plan(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         if not plan or not plan.get("subtasks"): return None
         
-        valid_tasks = []
-        for task in plan["subtasks"]:
-            module_name = task.get("module")
-            action_name = task.get("action")
-            
-            # Universal Schema Check: Does the module and action exist?
-            if module_name in self.available_actions and action_name in self.available_actions[module_name]:
-                valid_tasks.append(task)
-            else:
-                logger.warning(f"Validator: Discarding hallucinated action: {module_name}.{action_name}")
-
-        plan["subtasks"] = valid_tasks
-        return plan if valid_tasks else None
+        tasks = plan["subtasks"]
+        
+        # Rule: Find the first real web action and discard anything before it.
+        first_web_action_index = -1
+        for i, task in enumerate(tasks):
+            if task.get("module") == "web":
+                first_web_action_index = i
+                break
+        
+        if first_web_action_index > 0:
+            logger.warning(f"Validator: Discarding {first_web_action_index} invalid preliminary steps.")
+            tasks = tasks[first_web_action_index:]
+        
+        plan["subtasks"] = tasks
+        return plan
 
     def plan_goal(self, goal_text: str) -> Dict[str, Any]:
         logger.info(f"Received goal: '{goal_text}'")
+
+        # --- NEW: LOGIC TO DETECT AND HANDLE ARTICLE GENERATION ---
+        # Look for a pattern like "write an article about ..."
+        match = re.search(r"write an? (article|paragraph) about (.*)", goal_text, re.IGNORECASE)
+        if match:
+            topic = match.group(2).strip()
+            logger.info(f"Article generation goal detected. Topic: '{topic}'")
+            print(f"✍️ Understood. I will now write about '{topic}'. This may take a moment...")
+            
+            # 1. Call the new LLM function to generate the content
+            article_content = self.llm_provider.generate_content(topic)
+            if not article_content or "Error:" in article_content:
+                logger.error(f"Failed to generate content for topic: {topic}")
+                return None
+
+            # 2. Manually build the plan
+            logger.info("Content generated, now building a manual plan.")
+            manual_plan = {
+                "goal": f"Write an article about {topic}",
+                "subtasks": [
+                    {
+                        "module": "desktop",
+                        "action": "open_app",
+                        "parameters": {"app_name": "notepad"}
+                    },
+                    {
+                        "module": "desktop",
+                        "action": "keyboard_input",
+                        "parameters": {"text": article_content}
+                    }
+                ]
+            }
+            return manual_plan
+        # --- END OF NEW LOGIC ---
+
+        # If it's not an article request, proceed with the original planning logic
+        logger.info("Standard goal detected. Generating a JSON plan...")
         raw_plan = self.llm_provider.generate_plan(goal_text, self.available_actions)
         if not raw_plan: return None
-        logger.info("Validating plan...")
+
+        logger.info("Validating and cleaning generated plan...")
         clean_plan = self._validate_and_clean_plan(raw_plan)
-        if not clean_plan:
-            logger.error("Plan is invalid after validation.")
+        if not clean_plan or not clean_plan.get("subtasks"):
+            logger.error("Plan is invalid or empty after validation.")
             return None
+            
         logger.info("Plan validation complete.")
         return clean_plan
