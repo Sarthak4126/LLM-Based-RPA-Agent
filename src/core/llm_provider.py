@@ -15,7 +15,7 @@ class LLMProvider:
         prompt = self._create_plan_prompt(goal, available_actions)
         payload = {"model": self.model_name, "prompt": prompt, "format": "json", "stream": False}
         try:
-            response = requests.post(self.api_url, json=payload, timeout=180) # Increased timeout
+            response = requests.post(self.api_url, json=payload, timeout=180)
             response.raise_for_status()
             response_text = response.json().get('response', '')
             logger.info("Received plan response from Ollama.")
@@ -24,14 +24,13 @@ class LLMProvider:
             logger.error(f"LLM plan generation failed: {e}", exc_info=True)
             return None
 
-    # --- NEW FUNCTION FOR CONTENT GENERATION ---
     def generate_content(self, topic: str) -> str:
         logger.info(f"Generating content for topic: '{topic}'")
+        # MODIFIED: Using the new, more robust content prompt
         prompt = self._create_content_prompt(topic)
-        # Note: No "format: json" here, we want raw text
         payload = {"model": self.model_name, "prompt": prompt, "stream": False}
         try:
-            response = requests.post(self.api_url, json=payload, timeout=180) # Increased timeout
+            response = requests.post(self.api_url, json=payload, timeout=180)
             response.raise_for_status()
             response_text = response.json().get('response', '')
             logger.info("Received content response from Ollama.")
@@ -40,14 +39,28 @@ class LLMProvider:
             logger.error(f"LLM content generation failed: {e}", exc_info=True)
             return f"Error: Could not generate content for the topic '{topic}'."
 
+    # --- MODIFIED PROMPT FOR HIGHER QUALITY ---
     def _create_content_prompt(self, topic: str) -> str:
-        return f"""You are a helpful assistant. Write a concise, well-structured paragraph about the following topic. Do not include a title or any introductory phrases like "Here is a paragraph about...". Just provide the text of the paragraph itself.
+        return f"""### Persona
+You are a skilled and meticulous writer, an expert on the given topic. Your writing is clear, engaging, and professional.
 
-Topic: "{topic}"
+### Task
+Write a single, well-structured paragraph about the topic below.
+
+### Quality Guidelines
+- **Accuracy and Detail:** Ensure the information is accurate and detailed.
+- **Clarity and Coherence:** The paragraph must be easy to understand and flow logically.
+- **Spelling and Grammar:** CRITICAL: Proofread your writing. There must be no spelling mistakes or grammatical errors.
+- **Completeness:** Do not use incomplete sentences or trail off. Provide a complete thought.
+- **Formatting:** Do not include a title or any introductory phrases like "Here is a paragraph...". Respond ONLY with the paragraph itself.
+
+### Topic
+"{topic}"
 """
 
     def _create_plan_prompt(self, goal: str, actions: Dict) -> str:
         actions_formatted = json.dumps(actions, indent=2)
+        # This prompt remains unchanged
         return f"""You are a robot that creates a JSON plan from a user's goal.
 
 ### CRITICAL RULES
