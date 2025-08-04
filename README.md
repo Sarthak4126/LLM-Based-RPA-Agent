@@ -91,3 +91,52 @@ __pycache__/
 .idea/
 .vscode/
 logs/
+
+----------------------------------------------------
+# OpenAgent-Lite 🤖
+
+OpenAgent-Lite is a powerful, multitasking desktop assistant built in Python. It uses a local LLM (via Ollama) to understand natural language goals, create plans, and autonomously execute them using web and desktop automation tools.
+
+### 🎥 Demo
+*I will be adding a link to the LinkedIn post with the video here soon!*
+
+---
+
+### ✨ Key Features
+
+* **🧠 Intelligent Planning:** Translates high-level goals into concrete, multi-step execution plans.
+* **✍️ AI Content Generation:** Can write and save complete articles on any given topic.
+* **🌐 Robust Web Automation:** Uses Selenium to control web browsers for tasks like searching and media playback.
+* **🖥️ Desktop Control:** Uses PyAutoGUI to open and interact with local desktop applications.
+* **⚡ True Multitasking:** Capable of managing background tasks (like playing music) while executing new foreground tasks.
+* **✨ Custom GUI:** A clean and user-friendly interface built with CustomTkinter.
+
+---
+
+### 🛠️ Tech Stack
+
+* **Core:** Python
+* **AI:** Ollama (with Mistral model)
+* **GUI:** CustomTkinter
+* **Web Automation:** Selenium
+* **Desktop Automation:** PyAutoGUI
+* **CLI Formatting:** Rich
+
+---
+
+### 🚀 Getting Started
+
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/Sarthak4126/LLM-Based-RPA-Agent.git](https://github.com/Sarthak4126/LLM-Based-RPA-Agent.git)
+    cd LLM-Based-RPA-Agent
+    ```
+2.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  **Ensure Ollama is running** with the `mistral` model pulled.
+4.  **Run the application:**
+    ```bash
+    python run_gui.py
+    ```
