@@ -1,7 +1,6 @@
 # src/core/workflow.py
 import sys
 from typing import Callable
-from rich.console import Console
 from pathlib import Path
 
 # Adjust path to import from other src directories
@@ -12,11 +11,11 @@ if project_root not in sys.path:
 from src.core.planner import GoalPlanner
 from src.core.executor import TaskExecutor
 from src.core.logger import logger
-from src.interfaces.cli import expand_simple_task # Keep using the alias expander
+# --- MODIFIED: Import from the new utils.py file ---
+from src.core.utils import expand_simple_task
 
 # This function will now be the main entry point for any interface (CLI or GUI)
 def run_automation_workflow(goal_text: str, keep_open: bool, is_interactive: bool, output_callback: Callable[[str], None]):
-    console = Console()
     planner = GoalPlanner()
     executor = TaskExecutor()
     plan = None
@@ -60,8 +59,6 @@ def run_automation_workflow(goal_text: str, keep_open: bool, is_interactive: boo
 
         if should_wait:
             output_callback("✅ Task finished. Browser remains open.\n")
-            # In a GUI, we don't wait for input here. The user just closes the window.
-            # For CLI, the input prompt will be handled there.
         
         output_callback("🧹 Cleaning up resources...\n")
         executor.cleanup()
