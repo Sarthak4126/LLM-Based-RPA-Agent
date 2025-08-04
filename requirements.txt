@@ -4,3 +4,4 @@ playwright>=1.30.0
 schedule>=1.1.0
 SpeechRecognition>=3.10.0
 pyaudio>=0.2.0
+Rich
