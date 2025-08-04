@@ -99,7 +99,7 @@ OpenAgent-Lite is a powerful, multitasking desktop assistant built in Python. It
 
 ### 🎥 Demo
 *I will be adding a link to the LinkedIn post with the video here soon!*
-
+[Check out the video demo on my LinkedIn!](https://www.linkedin.com/posts/sarthak-singh-manhas-2223b71b7_python-ai-multitasking-activity-7358188975397720064-IDiV?utm_source=share&utm_medium=member_desktop&rcm=ACoAADJtP3oBOBpy--GlnxUK7jFuPxUvepeINl8)
 ---
 
 ### ✨ Key Features
