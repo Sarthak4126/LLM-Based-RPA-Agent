@@ -27,7 +27,6 @@ class GoalPlanner:
         
         tasks = plan["subtasks"]
         
-        # Rule: Find the first real web action and discard anything before it.
         first_web_action_index = -1
         for i, task in enumerate(tasks):
             if task.get("module") == "web":
@@ -44,21 +43,24 @@ class GoalPlanner:
     def plan_goal(self, goal_text: str) -> Dict[str, Any]:
         logger.info(f"Received goal: '{goal_text}'")
 
-        # --- NEW: LOGIC TO DETECT AND HANDLE ARTICLE GENERATION ---
-        # Look for a pattern like "write an article about ..."
         match = re.search(r"write an? (article|paragraph) about (.*)", goal_text, re.IGNORECASE)
         if match:
             topic = match.group(2).strip()
             logger.info(f"Article generation goal detected. Topic: '{topic}'")
             print(f"✍️ Understood. I will now write about '{topic}'. This may take a moment...")
             
-            # 1. Call the new LLM function to generate the content
             article_content = self.llm_provider.generate_content(topic)
             if not article_content or "Error:" in article_content:
                 logger.error(f"Failed to generate content for topic: {topic}")
                 return None
 
-            # 2. Manually build the plan
+            # --- NEW: FORMATTING LOGIC ---
+            # Capitalize the topic to make it look like a title
+            title = topic.title()
+            # Combine the title, two new lines, and the content into a single string
+            full_text_to_write = f"{title}\n\n{article_content}"
+            # --- END OF NEW LOGIC ---
+
             logger.info("Content generated, now building a manual plan.")
             manual_plan = {
                 "goal": f"Write an article about {topic}",
@@ -71,14 +73,13 @@ class GoalPlanner:
                     {
                         "module": "desktop",
                         "action": "keyboard_input",
-                        "parameters": {"text": article_content}
+                        # MODIFIED: Use the new formatted string here
+                        "parameters": {"text": full_text_to_write}
                     }
                 ]
             }
             return manual_plan
-        # --- END OF NEW LOGIC ---
 
-        # If it's not an article request, proceed with the original planning logic
         logger.info("Standard goal detected. Generating a JSON plan...")
         raw_plan = self.llm_provider.generate_plan(goal_text, self.available_actions)
         if not raw_plan: return None
