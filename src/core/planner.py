@@ -3,6 +3,7 @@ from typing import Dict, Any
 from .llm_provider import LLMProvider
 from .logger import logger
 import re
+import string
 
 class GoalPlanner:
     def __init__(self):
@@ -14,7 +15,9 @@ class GoalPlanner:
             "desktop": {
                 "open_app": "Opens a NON-BROWSER application (e.g., 'notepad'). Parameter: 'app_name'.",
                 "keyboard_input": "Types text using the keyboard. Parameter: 'text'.",
-                "mouse_click": "Performs a click at specific (x,y) coordinates."
+                "mouse_click": "Performs a click at specific (x,y) coordinates.",
+                # --- ADDED THE NEW ACTION TO THE LIST OF TOOLS ---
+                "press_hotkey": "Presses a combination of keys (e.g., ['ctrl', 's'])."
             },
             "web": {
                 "search": "Use to search 'google' or 'youtube'. Opens the browser automatically. Parameters: 'site', 'query'.",
@@ -23,20 +26,17 @@ class GoalPlanner:
         }
 
     def _validate_and_clean_plan(self, plan: Dict[str, Any]) -> Dict[str, Any]:
+        # This function remains the same
         if not plan or not plan.get("subtasks"): return None
-        
         tasks = plan["subtasks"]
-        
         first_web_action_index = -1
         for i, task in enumerate(tasks):
             if task.get("module") == "web":
                 first_web_action_index = i
                 break
-        
         if first_web_action_index > 0:
             logger.warning(f"Validator: Discarding {first_web_action_index} invalid preliminary steps.")
             tasks = tasks[first_web_action_index:]
-        
         plan["subtasks"] = tasks
         return plan
 
@@ -54,28 +54,24 @@ class GoalPlanner:
                 logger.error(f"Failed to generate content for topic: {topic}")
                 return None
 
-            # --- NEW: FORMATTING LOGIC ---
-            # Capitalize the topic to make it look like a title
+            # --- MODIFIED: CREATE A MORE DETAILED PLAN WITH SAVING ---
             title = topic.title()
-            # Combine the title, two new lines, and the content into a single string
             full_text_to_write = f"{title}\n\n{article_content}"
-            # --- END OF NEW LOGIC ---
+            
+            # Create a safe filename from the topic
+            safe_topic = topic.lower().replace(" ", "_")
+            valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+            filename = ''.join(c for c in safe_topic if c in valid_chars) + ".txt"
 
-            logger.info("Content generated, now building a manual plan.")
+            logger.info(f"Content generated, building a manual plan to write and save as '{filename}'.")
             manual_plan = {
-                "goal": f"Write an article about {topic}",
+                "goal": f"Write an article about {topic} and save it.",
                 "subtasks": [
-                    {
-                        "module": "desktop",
-                        "action": "open_app",
-                        "parameters": {"app_name": "notepad"}
-                    },
-                    {
-                        "module": "desktop",
-                        "action": "keyboard_input",
-                        # MODIFIED: Use the new formatted string here
-                        "parameters": {"text": full_text_to_write}
-                    }
+                    {"module": "desktop", "action": "open_app", "parameters": {"app_name": "notepad"}},
+                    {"module": "desktop", "action": "keyboard_input", "parameters": {"text": full_text_to_write}},
+                    {"module": "desktop", "action": "press_hotkey", "parameters": {"keys": ["ctrl", "s"]}},
+                    {"module": "desktop", "action": "keyboard_input", "parameters": {"text": filename}},
+                    {"module": "desktop", "action": "press_hotkey", "parameters": {"keys": ["enter"]}}
                 ]
             }
             return manual_plan
